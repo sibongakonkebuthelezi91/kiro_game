@@ -451,7 +451,6 @@ class Game {
     this.patternIdx = 0;
     this.spawnTimer = 0;
     this._floats    = [];
-    this._gameStartTime = null;  // reset grace period timer
     this.state      = 'playing';
 
     this._scoreEl.textContent = '0';
@@ -549,11 +548,6 @@ class Game {
   _update(dt) {
     const spawnInterval = (60 / this.song.bpm) * 1000; // ms per beat
 
-    // Grace period: don't end game for the first 3 seconds
-    if (!this._gameStartTime) this._gameStartTime = performance.now();
-    const elapsed = performance.now() - this._gameStartTime;
-    const graceActive = elapsed < 3000;
-
     /* If waiting for first hit, hold the first tile in place and don't spawn more */
     if (this._waitingForFirstHit) {
       // Keep the first tile locked at hit zone
@@ -592,10 +586,11 @@ class Game {
       }
       tile.depth += TILE_SPEED * dt * 1000;
 
-      /* MISS: tile passed hit zone → GAME OVER (unless grace period) */
-      if (tile.depth > HIT_ZONE_DEPTH + HIT_TOLERANCE + 0.06) {
-        if (graceActive) {
-          // During grace, just remove the tile without penalty
+      /* MISS: tile passed hit zone → GAME OVER
+         But only after player has successfully hit at least 3 tiles */
+      if (tile.depth > HIT_ZONE_DEPTH + HIT_TOLERANCE + 0.08) {
+        if (this.totalHits < 3) {
+          // Forgive early misses — just remove the tile
           this.tiles.splice(i, 1);
         } else {
           tile.missed = true;
@@ -1048,7 +1043,6 @@ class Game {
     // First tile hit — unlock the game flow with a brief delay before tiles spawn
     if (this._waitingForFirstHit) {
       this._waitingForFirstHit = false;
-      this._gameStartTime = performance.now(); // reset grace timer from this moment
       this.spawnTimer = -800; // 800ms delay before next tile spawns
     }
 
