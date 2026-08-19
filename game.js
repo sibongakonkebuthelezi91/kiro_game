@@ -588,7 +588,7 @@ class Game {
 
       /* MISS: tile passed hit zone → GAME OVER
          But only after player has successfully hit at least 3 tiles */
-      if (tile.depth > HIT_ZONE_DEPTH + HIT_TOLERANCE + 0.08) {
+      if (tile.depth > HIT_ZONE_DEPTH + 0.22) {
         if (this.totalHits < 3) {
           // Forgive early misses — just remove the tile
           this.tiles.splice(i, 1);
@@ -1005,26 +1005,25 @@ class Game {
     let best = null;
     let bestDist = Infinity;
 
-    // First try: find tile in the requested lane
+    // Find the nearest unhit tile — prefer tiles in the requested lane
+    // Use asymmetric tolerance: generous for approaching tiles, tight for passed ones
+    const EARLY_TOLERANCE = 0.30;  // allow hitting tiles still approaching
+    const LATE_TOLERANCE  = 0.18;  // allow hitting tiles slightly past
+
     this.tiles.forEach(tile => {
-      if (tile.hit || tile.missed || tile.lane !== lane) return;
-      const dist = Math.abs(tile.depth - HIT_ZONE_DEPTH);
-      if (dist < bestDist) { bestDist = dist; best = tile; }
+      if (tile.hit || tile.missed) return;
+      const diff = tile.depth - HIT_ZONE_DEPTH; // negative = approaching, positive = passed
+      const inWindow = diff < LATE_TOLERANCE && diff > -EARLY_TOLERANCE;
+      if (!inWindow) return;
+
+      const dist = Math.abs(diff);
+      // Prefer same-lane tile, but accept any lane
+      const lanePenalty = (tile.lane === lane) ? 0 : 0.001;
+      const score = dist + lanePenalty;
+      if (score < bestDist) { bestDist = score; best = tile; }
     });
 
-    // Fallback: if nothing in that lane, find the closest tile in ANY lane near hit zone
-    // This prevents "skipping" when player is one lane off
-    if (!best || bestDist > HIT_TOLERANCE) {
-      best = null;
-      bestDist = Infinity;
-      this.tiles.forEach(tile => {
-        if (tile.hit || tile.missed) return;
-        const dist = Math.abs(tile.depth - HIT_ZONE_DEPTH);
-        if (dist < bestDist) { bestDist = dist; best = tile; }
-      });
-    }
-
-    if (!best || bestDist > HIT_TOLERANCE) return; // No tile close enough
+    if (!best) return; // No tile in range at all
 
     // Snap ball to the tile's actual lane
     lane = best.lane;
@@ -1047,11 +1046,12 @@ class Game {
     }
 
     // Points! Every tile touch gives points
+    const hitDist = Math.abs(best.depth - HIT_ZONE_DEPTH);
     let points, label, color;
-    if (bestDist < 0.05) {
+    if (hitDist < 0.06) {
       points = 30; label = 'PERFECT!'; color = '#fbbf24';
       this.audio.playPerfect();
-    } else if (bestDist < 0.10) {
+    } else if (hitDist < 0.14) {
       points = 20; label = 'GREAT'; color = '#22d3ee';
       this.audio.playHit(lane);
     } else {
