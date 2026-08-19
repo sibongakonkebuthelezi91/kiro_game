@@ -12,7 +12,7 @@
 
 /* ── CONSTANTS ────────────────────────────────────────────── */
 const LANES          = 4;
-const TILE_SPEED     = 0.012;   // units/ms (depth 0→1 speed)
+const TILE_SPEED     = 0.0004;  // depth units per ms (tiles take ~2s to reach player)
 const HIT_ZONE_DEPTH = 0.82;   // depth at which tiles should be tapped
 const HIT_TOLERANCE  = 0.08;   // ± depth window for a valid hit
 const SPAWN_INTERVAL_BASE = 500; // ms between tile spawns (scales with BPM)
@@ -451,6 +451,7 @@ class Game {
     this.patternIdx = 0;
     this.spawnTimer = 0;
     this._floats    = [];
+    this._gameStartTime = null;  // reset grace period timer
     this.state      = 'playing';
 
     this._scoreEl.textContent = '0';
@@ -553,6 +554,11 @@ class Game {
   _update(dt) {
     const spawnInterval = (60 / this.song.bpm) * 1000; // ms per beat
 
+    // Grace period: don't end game for the first 2 seconds
+    if (!this._gameStartTime) this._gameStartTime = performance.now();
+    const elapsed = performance.now() - this._gameStartTime;
+    const graceActive = elapsed < 2000;
+
     /* Spawn tiles */
     this.spawnTimer += dt * 1000;
     while (this.spawnTimer >= spawnInterval) {
@@ -573,12 +579,17 @@ class Game {
       }
       tile.depth += TILE_SPEED * dt * 1000;
 
-      /* MISS: tile passed hit zone → GAME OVER */
-      if (tile.depth > HIT_ZONE_DEPTH + HIT_TOLERANCE + 0.04) {
-        tile.missed = true;
-        this.audio.playMiss();
-        this._gameOver();
-        return;
+      /* MISS: tile passed hit zone → GAME OVER (unless grace period) */
+      if (tile.depth > HIT_ZONE_DEPTH + HIT_TOLERANCE + 0.06) {
+        if (graceActive) {
+          // During grace, just remove the tile without penalty
+          this.tiles.splice(i, 1);
+        } else {
+          tile.missed = true;
+          this.audio.playMiss();
+          this._gameOver();
+          return;
+        }
       }
     }
 
