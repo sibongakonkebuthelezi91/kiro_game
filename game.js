@@ -14,7 +14,7 @@
 const LANES          = 4;
 const TILE_SPEED     = 0.0004;  // depth units per ms (tiles take ~2s to reach player)
 const HIT_ZONE_DEPTH = 0.82;   // depth at which tiles should be tapped
-const HIT_TOLERANCE  = 0.08;   // ± depth window for a valid hit
+const HIT_TOLERANCE  = 0.18;   // ± depth window for a valid hit (generous for responsive feel)
 const SPAWN_INTERVAL_BASE = 500; // ms between tile spawns (scales with BPM)
 
 /* 3D Perspective */
@@ -772,40 +772,81 @@ class Game {
 
     ctx.save();
 
+    // Apply perspective tilt — tiles tilt toward the player as they get closer
+    const tiltAmount = 0.15 * (1 - tile.depth); // more tilt when closer
+    const centerX = x + w / 2;
+    const centerY = y + h / 2;
+    ctx.translate(centerX, centerY);
+    ctx.transform(1, 0, tiltAmount, 1, 0, 0); // skewX for 3D feel
+    ctx.translate(-centerX, -centerY);
+
     if (tile.hit) {
       ctx.globalAlpha = Math.max(0, tile.flash / 0.15);
       ctx.fillStyle = '#fff';
       ctx.shadowColor = tile.color;
-      ctx.shadowBlur = 40;
+      ctx.shadowBlur = 50;
+      this._roundRect(ctx, x, y, w, h, 8);
+      ctx.fill();
     } else if (tile.missed) {
       ctx.globalAlpha = 0.4;
       ctx.fillStyle = '#444';
+      this._roundRect(ctx, x, y, w, h, 6);
+      ctx.fill();
     } else {
-      // 3D tile: top face + front face
-      const depth3D = h * 0.3; // extrusion depth
+      // 3D tile: top face + front face + side highlight
+      const depth3D = h * 0.35; // extrusion height (thicker for visibility)
 
-      // Front face (darker)
-      ctx.fillStyle = this._darkenColor(tile.color, 0.4);
+      // Drop shadow behind tile
+      ctx.save();
+      ctx.globalAlpha = 0.3 * pos.scale;
+      ctx.fillStyle = '#000';
+      ctx.shadowColor = 'transparent';
+      this._roundRect(ctx, x + 4, y + h - depth3D + 6, w, depth3D, 4);
+      ctx.fill();
+      ctx.restore();
+
+      // Front face (darker, gives depth)
+      ctx.fillStyle = this._darkenColor(tile.color, 0.5);
       this._roundRect(ctx, x, y + h - depth3D, w, depth3D, 4);
       ctx.fill();
 
-      // Top face
+      // Right edge for 3D pop
+      ctx.fillStyle = this._darkenColor(tile.color, 0.65);
+      ctx.fillRect(x + w - 3, y + 4, 3, h - depth3D - 4);
+
+      // Top face (main visible surface)
       const tileGrad = ctx.createLinearGradient(x, y, x, y + h - depth3D);
-      tileGrad.addColorStop(0, this._lightenColor(tile.color, 0.3));
-      tileGrad.addColorStop(1, tile.color);
+      tileGrad.addColorStop(0, this._lightenColor(tile.color, 0.4));
+      tileGrad.addColorStop(0.6, tile.color);
+      tileGrad.addColorStop(1, this._darkenColor(tile.color, 0.15));
       ctx.fillStyle = tileGrad;
       ctx.shadowColor = tile.color;
-      ctx.shadowBlur = 12 * pos.scale;
-      this._roundRect(ctx, x, y, w, h - depth3D, 6);
+      ctx.shadowBlur = 16 * pos.scale;
+      this._roundRect(ctx, x, y, w, h - depth3D, 8);
       ctx.fill();
 
-      // Shine
-      ctx.globalAlpha = 0.25;
-      const shine = ctx.createLinearGradient(x, y, x, y + (h - depth3D) * 0.4);
-      shine.addColorStop(0, 'rgba(255,255,255,0.6)');
+      // Bright border outline for clarity
+      ctx.strokeStyle = this._lightenColor(tile.color, 0.5);
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.6;
+      this._roundRect(ctx, x, y, w, h - depth3D, 8);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Shine / gloss on top face
+      ctx.globalAlpha = 0.35;
+      const shine = ctx.createLinearGradient(x, y, x, y + (h - depth3D) * 0.45);
+      shine.addColorStop(0, 'rgba(255,255,255,0.8)');
       shine.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = shine;
-      this._roundRect(ctx, x + 2, y + 2, w - 4, (h - depth3D) * 0.4, 4);
+      this._roundRect(ctx, x + 3, y + 2, w - 6, (h - depth3D) * 0.4, 6);
+      ctx.fill();
+
+      // Inner icon/circle indicator to make tiles even more distinct
+      ctx.globalAlpha = 0.2;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(x + w / 2, y + (h - depth3D) / 2, Math.min(w, h - depth3D) * 0.18, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -930,10 +971,10 @@ class Game {
 
     // Points! Every tile touch gives points
     let points, label, color;
-    if (bestDist < 0.02) {
+    if (bestDist < 0.05) {
       points = 30; label = 'PERFECT!'; color = '#fbbf24';
       this.audio.playPerfect();
-    } else if (bestDist < 0.05) {
+    } else if (bestDist < 0.10) {
       points = 20; label = 'GREAT'; color = '#22d3ee';
       this.audio.playHit(lane);
     } else {
