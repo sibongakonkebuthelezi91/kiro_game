@@ -226,10 +226,10 @@ class Ball3D {
       this.screenX = this.dragCurX;
       this.screenY = this.dragCurY;
     } else {
-      // Smooth X
-      this.screenX += (this.targetX - this.screenX) * Math.min(1, dt * 14);
+      // Smooth X (fast snap, not sluggish)
+      this.screenX += (this.targetX - this.screenX) * Math.min(1, dt * 40);
       this.screenX += this.vx * dt;
-      this.vx *= 0.92;
+      this.vx *= 0.85;
 
       // Bounce Y
       this.vy += GRAVITY * dt;
@@ -926,12 +926,18 @@ class Game {
   _onKey(e) {
     if (this.state !== 'playing') return;
 
-    // Left/Right arrows: move ball to adjacent lane and hit
+    // Left/Right arrows: move ball to adjacent lane and hit instantly
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
       const newLane = Math.max(0, this.ball.lane - 1);
       this.ball.lane = newLane;
       this.ball.glowColor = this.song.color[newLane];
+      // Snap ball position immediately — no lag
+      const pos = this._depthToScreen(HIT_ZONE_DEPTH, newLane);
+      this.ball.screenX = pos.cx;
+      this.ball.targetX = pos.cx;
+      this.ball.vx = 0;
+      this.ball.hop();
       this._hitLane(newLane);
       return;
     }
@@ -940,15 +946,31 @@ class Game {
       const newLane = Math.min(LANES - 1, this.ball.lane + 1);
       this.ball.lane = newLane;
       this.ball.glowColor = this.song.color[newLane];
+      // Snap ball position immediately — no lag
+      const pos = this._depthToScreen(HIT_ZONE_DEPTH, newLane);
+      this.ball.screenX = pos.cx;
+      this.ball.targetX = pos.cx;
+      this.ball.vx = 0;
+      this.ball.hop();
       this._hitLane(newLane);
       return;
     }
 
-    // Direct lane keys still work
+    // Direct lane keys still work (also snap)
     const map = { 'a':0, 's':1, 'd':2, 'f':3,
                   '1':0, '2':1, '3':2, '4':3 };
     const lane = map[e.key];
-    if (lane !== undefined) { e.preventDefault(); this._hitLane(lane); }
+    if (lane !== undefined) {
+      e.preventDefault();
+      this.ball.lane = lane;
+      this.ball.glowColor = this.song.color[lane];
+      const pos = this._depthToScreen(HIT_ZONE_DEPTH, lane);
+      this.ball.screenX = pos.cx;
+      this.ball.targetX = pos.cx;
+      this.ball.vx = 0;
+      this.ball.hop();
+      this._hitLane(lane);
+    }
     if (e.key === 'Escape' || e.key === 'p') this._pause();
   }
 
