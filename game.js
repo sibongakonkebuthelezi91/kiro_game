@@ -215,7 +215,7 @@ class Ball3D {
   }
 
   hop() {
-    this.vy = -480;
+    this.vy = -750;
   }
 
   update(dt, baseX, baseY, canvasW) {
@@ -238,7 +238,7 @@ class Ball3D {
       if (this.bounceY >= 0) {
         this.bounceY = 0;
         this.vy = -Math.abs(this.vy) * RESTITUTION;
-        if (Math.abs(this.vy) < 100) this.vy = -300;
+        if (Math.abs(this.vy) < 200) this.vy = -500;
       }
 
       this.screenY = baseY + this.bounceY;
@@ -468,31 +468,26 @@ class Game {
     this._showScreen('screen-game');
     cancelAnimationFrame(this._rafId);
 
-    // Spawn the first tile at the hit zone and auto-hit it so the ball hops immediately
+    // Place the first tile at the hit zone — ball starts on it, waiting for player
     const firstLane = this.song.pattern[0];
     this.patternIdx = 1;
     const firstTile = new Tile3D(firstLane, this.song.color[firstLane]);
-    firstTile.depth = HIT_ZONE_DEPTH;
+    firstTile.depth = HIT_ZONE_DEPTH; // sits right at hit zone
     this.tiles.push(firstTile);
 
-    // Auto-hit the first tile
+    // Position ball directly on the first tile
     this.ball.lane = firstLane;
     this.ball.glowColor = this.song.color[firstLane];
-    this.ball.hop();
-    firstTile.hit = true;
-    firstTile.flash = 0.15;
-    this.totalHits++;
-    this.score += 10;
-    this.combo = 2;
-    this._scoreEl.textContent = this.score;
-    this._comboEl.textContent = 'x2';
-
     const pos = this._depthToScreen(HIT_ZONE_DEPTH, firstLane);
     this.ball.targetX = pos.cx;
     this.ball.screenX = pos.cx;
     this.ball.screenY = pos.cy - 30;
-    this.particles.emit(pos.cx, pos.cy, this.song.color[firstLane], 12);
-    this.audio.playHit(firstLane);
+    this.ball.bounceY = 0;
+    this.ball.vy = -750; // start with a big hop off the first tile
+    this.ball.vx = 0;
+
+    // Don't spawn more tiles until the first one is hit — use a flag
+    this._waitingForFirstHit = true;
 
     this._lastTime = performance.now();
     this._rafId = requestAnimationFrame(t => this._loop(t));
@@ -554,10 +549,28 @@ class Game {
   _update(dt) {
     const spawnInterval = (60 / this.song.bpm) * 1000; // ms per beat
 
-    // Grace period: don't end game for the first 2 seconds
+    // Grace period: don't end game for the first 3 seconds
     if (!this._gameStartTime) this._gameStartTime = performance.now();
     const elapsed = performance.now() - this._gameStartTime;
-    const graceActive = elapsed < 2000;
+    const graceActive = elapsed < 3000;
+
+    /* If waiting for first hit, hold the first tile in place and don't spawn more */
+    if (this._waitingForFirstHit) {
+      // Keep the first tile locked at hit zone
+      if (this.tiles.length > 0 && !this.tiles[0].hit) {
+        this.tiles[0].depth = HIT_ZONE_DEPTH;
+      }
+      // Ball still bounces
+      const hitZoneScreen = this._depthToScreen(HIT_ZONE_DEPTH, this.ball.lane);
+      this.ball.targetX = hitZoneScreen.cx;
+      this.ball.update(dt, hitZoneScreen.cx, hitZoneScreen.cy - 30, this.W);
+      this.particles.update(dt);
+      this._floats = this._floats.filter(f => {
+        f.age += dt; f.y -= 60 * dt; f.alpha = 1 - f.age / f.life;
+        return f.age < f.life;
+      });
+      return;
+    }
 
     /* Spawn tiles */
     this.spawnTimer += dt * 1000;
@@ -1009,6 +1022,12 @@ class Game {
     best.hit   = true;
     best.flash = 0.15;
     this.totalHits++;
+
+    // First tile hit — unlock the game flow
+    if (this._waitingForFirstHit) {
+      this._waitingForFirstHit = false;
+      this._gameStartTime = performance.now(); // reset grace timer from this moment
+    }
 
     // Points! Every tile touch gives points
     let points, label, color;
