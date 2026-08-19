@@ -466,6 +466,33 @@ class Game {
 
     this._showScreen('screen-game');
     cancelAnimationFrame(this._rafId);
+
+    // Spawn the first tile at the hit zone and auto-hit it so the ball hops immediately
+    const firstLane = this.song.pattern[0];
+    this.patternIdx = 1;
+    const firstTile = new Tile3D(firstLane, this.song.color[firstLane]);
+    firstTile.depth = HIT_ZONE_DEPTH;
+    this.tiles.push(firstTile);
+
+    // Auto-hit the first tile
+    this.ball.lane = firstLane;
+    this.ball.glowColor = this.song.color[firstLane];
+    this.ball.hop();
+    firstTile.hit = true;
+    firstTile.flash = 0.15;
+    this.totalHits++;
+    this.score += 10;
+    this.combo = 2;
+    this._scoreEl.textContent = this.score;
+    this._comboEl.textContent = 'x2';
+
+    const pos = this._depthToScreen(HIT_ZONE_DEPTH, firstLane);
+    this.ball.targetX = pos.cx;
+    this.ball.screenX = pos.cx;
+    this.ball.screenY = pos.cy - 30;
+    this.particles.emit(pos.cx, pos.cy, this.song.color[firstLane], 12);
+    this.audio.playHit(firstLane);
+
     this._lastTime = performance.now();
     this._rafId = requestAnimationFrame(t => this._loop(t));
   }
