@@ -153,6 +153,7 @@ html, body {
   width: 100%;
   cursor: pointer;
   touch-action: none; /* allow pointer events for drag */
+  background: linear-gradient(180deg, #0a0014 0%, #0d0d24 40%, #141430 100%);
 }
 
 /* ── BEAT BAR ────────────────────────────────────────────── */
