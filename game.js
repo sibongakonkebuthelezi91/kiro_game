@@ -1010,23 +1010,46 @@ class Game {
     let best = null;
     let bestDist = Infinity;
 
+    // First try: find tile in the requested lane
     this.tiles.forEach(tile => {
       if (tile.hit || tile.missed || tile.lane !== lane) return;
       const dist = Math.abs(tile.depth - HIT_ZONE_DEPTH);
       if (dist < bestDist) { bestDist = dist; best = tile; }
     });
 
-    if (!best || bestDist > HIT_TOLERANCE) return; // No tile close enough — no penalty here, just ignore
+    // Fallback: if nothing in that lane, find the closest tile in ANY lane near hit zone
+    // This prevents "skipping" when player is one lane off
+    if (!best || bestDist > HIT_TOLERANCE) {
+      best = null;
+      bestDist = Infinity;
+      this.tiles.forEach(tile => {
+        if (tile.hit || tile.missed) return;
+        const dist = Math.abs(tile.depth - HIT_ZONE_DEPTH);
+        if (dist < bestDist) { bestDist = dist; best = tile; }
+      });
+    }
+
+    if (!best || bestDist > HIT_TOLERANCE) return; // No tile close enough
+
+    // Snap ball to the tile's actual lane
+    lane = best.lane;
+    this.ball.lane = lane;
+    this.ball.glowColor = this.song.color[lane];
+    const snapPos = this._depthToScreen(HIT_ZONE_DEPTH, lane);
+    this.ball.screenX = snapPos.cx;
+    this.ball.targetX = snapPos.cx;
+    this.ball.vx = 0;
 
     // HIT!
     best.hit   = true;
     best.flash = 0.15;
     this.totalHits++;
 
-    // First tile hit — unlock the game flow
+    // First tile hit — unlock the game flow with a brief delay before tiles spawn
     if (this._waitingForFirstHit) {
       this._waitingForFirstHit = false;
       this._gameStartTime = performance.now(); // reset grace timer from this moment
+      this.spawnTimer = -800; // 800ms delay before next tile spawns
     }
 
     // Points! Every tile touch gives points
