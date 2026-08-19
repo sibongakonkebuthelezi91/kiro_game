@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Beat Hop – Tile Rhythm Game</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── SCREENS ─────────────────────────────────────────── -->
+  <div id="screen-menu" class="screen active">
+    <div class="menu-inner">
+      <h1 class="title">🎵 Beat Hop</h1>
+      <p class="subtitle">Tap the tiles on the beat!</p>
+      <div class="song-select">
+        <label>Choose a track</label>
+        <div class="song-cards">
+          <div class="song-card selected" data-song="bounce">
+            <span class="song-icon">🎹</span>
+            <span class="song-name">Bounce Beat</span>
+            <span class="song-bpm">120 BPM</span>
+          </div>
+          <div class="song-card" data-song="groove">
+            <span class="song-icon">🎸</span>
+            <span class="song-name">Night Groove</span>
+            <span class="song-bpm">100 BPM</span>
+          </div>
+          <div class="song-card" data-song="rush">
+            <span class="song-icon">🥁</span>
+            <span class="song-name">Drum Rush</span>
+            <span class="song-bpm">145 BPM</span>
+          </div>
+        </div>
+      </div>
+      <button id="btn-play" class="btn-primary">▶  PLAY</button>
+    </div>
+  </div>
+
+  <div id="screen-game" class="screen">
+    <div id="hud">
+      <div id="hud-score">
+        <span class="hud-label">SCORE</span>
+        <span id="score-val">0</span>
+      </div>
+      <div id="hud-combo">
+        <span class="hud-label">COMBO</span>
+        <span id="combo-val">x1</span>
+      </div>
+      <div id="hud-song">
+        <span id="song-title-hud"></span>
+      </div>
+      <button id="btn-pause" class="btn-icon">⏸</button>
+    </div>
+    <canvas id="game-canvas"></canvas>
+    <div id="beat-bar">
+      <div id="beat-indicator"></div>
+    </div>
+  </div>
+
+  <div id="screen-pause" class="screen">
+    <div class="menu-inner">
+      <h2>Paused</h2>
+      <button id="btn-resume" class="btn-primary">▶  Resume</button>
+      <button id="btn-menu-from-pause" class="btn-secondary">⬅  Menu</button>
+    </div>
+  </div>
+
+  <div id="screen-gameover" class="screen">
+    <div class="menu-inner">
+      <h2 id="go-title">Game Over</h2>
+      <p id="go-score-label">Score</p>
+      <p id="go-score">0</p>
+      <p id="go-combo">Best Combo: x1</p>
+      <p id="go-grade" class="grade">C</p>
+      <button id="btn-retry" class="btn-primary">🔁  Retry</button>
+      <button id="btn-menu-from-go" class="btn-secondary">⬅  Menu</button>
+    </div>
+  </div>
+
+  <!-- ── FLOATING FEEDBACK CONTAINER ──────────────────────── -->
+  <div id="feedback-container"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>

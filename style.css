@@ -1,0 +1,217 @@
+/* ── RESET & BASE ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:         #0a0a12;
+  --surface:    #13131f;
+  --accent1:    #7c3aed;
+  --accent2:    #06b6d4;
+  --accent3:    #f472b6;
+  --accent4:    #22d3ee;
+  --danger:     #ef4444;
+  --text:       #e2e8f0;
+  --text-dim:   #64748b;
+  --radius:     12px;
+  --tile-h:     90px;
+  --lane-gap:   6px;
+}
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ── SCREENS ─────────────────────────────────────────────── */
+.screen {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity .3s ease;
+  z-index: 10;
+}
+.screen.active {
+  opacity: 1; pointer-events: all;
+}
+#screen-game {
+  flex-direction: column;
+  background: var(--bg);
+  z-index: 1;
+}
+
+/* ── MENU ────────────────────────────────────────────────── */
+.menu-inner {
+  background: var(--surface);
+  border: 1px solid #1e1e32;
+  border-radius: 24px;
+  padding: 40px 32px;
+  min-width: 320px;
+  max-width: 420px;
+  width: 92vw;
+  display: flex; flex-direction: column; align-items: center; gap: 20px;
+  box-shadow: 0 0 60px rgba(124,58,237,.25);
+}
+
+.title {
+  font-size: 2.8rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--accent1), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -.5px;
+}
+
+.subtitle { color: var(--text-dim); font-size: .95rem; }
+
+.song-select { width: 100%; }
+.song-select label {
+  display: block; margin-bottom: 10px;
+  font-size: .75rem; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--text-dim);
+}
+.song-cards { display: flex; flex-direction: column; gap: 8px; }
+
+.song-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  background: #1a1a2e;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+}
+.song-card:hover  { border-color: var(--accent1); }
+.song-card.selected {
+  border-color: var(--accent1);
+  background: #1f1040;
+}
+.song-icon  { font-size: 1.4rem; }
+.song-name  { flex: 1; font-weight: 600; }
+.song-bpm   { font-size: .78rem; color: var(--text-dim); }
+
+/* ── BUTTONS ─────────────────────────────────────────────── */
+.btn-primary, .btn-secondary {
+  width: 100%; padding: 14px;
+  border: none; border-radius: var(--radius);
+  font-size: 1rem; font-weight: 700;
+  cursor: pointer; letter-spacing: .05em;
+  transition: transform .1s, box-shadow .2s;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent1), var(--accent2));
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(124,58,237,.4);
+}
+.btn-primary:hover  { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,58,237,.55); }
+.btn-primary:active { transform: translateY(0); }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid #2e2e4a;
+}
+.btn-secondary:hover { color: var(--text); border-color: #4a4a6a; }
+
+.btn-icon {
+  background: transparent; border: none;
+  font-size: 1.3rem; cursor: pointer;
+  color: var(--text-dim);
+  padding: 4px 8px;
+  transition: color .2s;
+}
+.btn-icon:hover { color: var(--text); }
+
+/* ── HUD ─────────────────────────────────────────────────── */
+#hud {
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 20px;
+  width: 100%;
+  background: rgba(10,10,18,.85);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid #1a1a2e;
+  z-index: 5;
+}
+.hud-label {
+  display: block; font-size: .6rem;
+  letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+#score-val, #combo-val {
+  font-size: 1.4rem; font-weight: 800;
+  color: var(--accent2);
+}
+#combo-val { color: var(--accent3); }
+#hud-song  { flex: 1; text-align: center; font-size: .85rem; color: var(--text-dim); }
+
+/* ── CANVAS ──────────────────────────────────────────────── */
+#game-canvas {
+  display: block;
+  flex: 1;
+  width: 100%;
+  cursor: pointer;
+  touch-action: none; /* allow pointer events for drag */
+}
+
+/* ── BEAT BAR ────────────────────────────────────────────── */
+#beat-bar {
+  width: 100%;
+  height: 6px;
+  background: #1a1a2e;
+  overflow: hidden;
+}
+#beat-indicator {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent1), var(--accent2));
+  transition: width .05s linear;
+}
+
+/* ── FEEDBACK LABELS ─────────────────────────────────────── */
+#feedback-container {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 20;
+}
+.feedback-label {
+  position: absolute;
+  font-size: 1.5rem; font-weight: 800;
+  letter-spacing: .05em;
+  pointer-events: none;
+  animation: feedbackAnim .7s ease-out forwards;
+}
+@keyframes feedbackAnim {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(1.4); }
+}
+
+/* ── GAME OVER ───────────────────────────────────────────── */
+#go-score {
+  font-size: 3rem; font-weight: 900;
+  background: linear-gradient(135deg, var(--accent1), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+#go-combo  { color: var(--text-dim); font-size: .9rem; }
+#go-score-label { font-size: .75rem; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); }
+
+.grade {
+  font-size: 4rem; font-weight: 900;
+  line-height: 1;
+}
+.grade-S { color: #fbbf24; }
+.grade-A { color: #22d3ee; }
+.grade-B { color: #86efac; }
+.grade-C { color: #94a3b8; }
+
+/* ── PAUSE OVERLAY ───────────────────────────────────────── */
+#screen-pause { background: rgba(0,0,0,.7); }
+#screen-pause .menu-inner { gap: 16px; }
+
+/* ── MEDIA ───────────────────────────────────────────────── */
+@media (max-width: 400px) {
+  .title { font-size: 2.2rem; }
+  .menu-inner { padding: 28px 20px; }
+}
