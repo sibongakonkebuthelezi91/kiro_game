@@ -637,8 +637,8 @@ class Game {
     const roadLeft = vpx - roadW / 2;
     const laneX = roadLeft + lane * laneW;
 
-    // Tile height scales with depth
-    const tileH = 12 + 55 * Math.pow(depth, 1.2);
+    // Tile height scales with depth (big and visible)
+    const tileH = 24 + 100 * Math.pow(depth, 1.1);
 
     return {
       x: laneX,
@@ -925,8 +925,27 @@ class Game {
 
   _onKey(e) {
     if (this.state !== 'playing') return;
+
+    // Left/Right arrows: move ball to adjacent lane and hit
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      const newLane = Math.max(0, this.ball.lane - 1);
+      this.ball.lane = newLane;
+      this.ball.glowColor = this.song.color[newLane];
+      this._hitLane(newLane);
+      return;
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      const newLane = Math.min(LANES - 1, this.ball.lane + 1);
+      this.ball.lane = newLane;
+      this.ball.glowColor = this.song.color[newLane];
+      this._hitLane(newLane);
+      return;
+    }
+
+    // Direct lane keys still work
     const map = { 'a':0, 's':1, 'd':2, 'f':3,
-                  'ArrowLeft':0, 'ArrowDown':1, 'ArrowRight':2, 'ArrowUp':3,
                   '1':0, '2':1, '3':2, '4':3 };
     const lane = map[e.key];
     if (lane !== undefined) { e.preventDefault(); this._hitLane(lane); }
